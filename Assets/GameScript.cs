@@ -5,8 +5,11 @@ public class GameScript : MonoBehaviour {
 
 	public GameObject cylinderPrefab;
 	public GUIText movesLeftText; 
+	public int level;
+	private int TOTAL_LEVELS = 2;
 
 	private NodeScript focusNode = null;
+	private NodeScript startStopNode = null;
 	private int totalCoins = 0;
 	private bool gameRunning = true;
 
@@ -28,9 +31,10 @@ public class GameScript : MonoBehaviour {
 
 			NodeScript nodeScript = node.GetComponent(typeof(NodeScript)) as NodeScript;
 			if (nodeScript.nodeType == NodeType.StartStop) {
+				startStopNode = nodeScript;
 				SelectedNode(nodeScript);
-				return;
 			}
+
 		}
 	}
 
@@ -50,31 +54,57 @@ public class GameScript : MonoBehaviour {
 			movesLeftText.guiText.text = "Moves Left: " + movesLeft;
 			
 			if (movesLeft <= 0) {
-				Debug.Log("THE GAME IS OVER");
-				Invoke("lose", 0.25f); // send the win function after half a second
+
+				// If there is a stop start node, you must finish your path on it.
+				if (startStopNode && startStopNode != node) {
+					Lose ();
+					return;
+				}
+
+				// You must collect all of the coins
+				if (totalCoins > 0) {
+					Lose();
+					return;
+				}
+
+				Win();
 			}
 		
 		}
 	}
 
-	void lose() {
+	void Lose() {
 		gameRunning = false;
 		movesLeftText.guiText.text = "YOU LOSE";
+		Invoke ("RestartLevel", 0.5f);
 	}
 
-	void win() {
+	void Win() {
 		gameRunning = false;
 		movesLeftText.guiText.text = "YOU WIN";
+		Invoke ("NextLevel", 0.5f);
+	}
+
+	void NextLevel() {
+		if (level == TOTAL_LEVELS) {
+			Debug.Log ("YOU WIN THE WHOLE GAME");
+			Invoke("LoadFirstLevel", 0.25f);
+		} else {
+			Application.LoadLevel ("Level_" + (level + 1)); 
+		}
+	}
+
+	void LoadFirstLevel() {
+		Application.LoadLevel ("Level_1");
+	}
+
+	void RestartLevel() {
+		Application.LoadLevel ("Level_" + level);
 	}
 
 	public void CollectedCoin(CoinScript coin) {
 		totalCoins--;
 		Destroy (coin.gameObject);
-
-		if (totalCoins <= 0) {
-			CancelInvoke("lose"); // you can't win if you're going to lose
-			win ();
-		}
 	}
 
 	void ConnectNodeToFocusNode(NodeScript node) {
